@@ -1,7 +1,7 @@
 <?php
 // Hàm kết nối CSDL
 function connect_db(){
-    $servername = "localhost:3307";
+    $servername = "localhost";
     $username = "root";
     $password = "";
     $dbname = "project";
@@ -51,38 +51,38 @@ function register_user($conn, $email, $id_number, $username, $password, $account
 }
 
 // Hàm xử lý đăng ký
-function handle_registration() {
-    if (isset($_POST['submit'])) {
-        $username = $_POST['username'];
-        $password = $_POST['password'];
-        $confirm_password = $_POST['confirm_password'];
-        $account_type = $_POST['account_type'];
+// function handle_registration() {
+//     if (isset($_POST['submit'])) {
+//         $username = $_POST['username'];
+//         $password = $_POST['password'];
+//         $confirm_password = $_POST['confirm_password'];
+//         $account_type = $_POST['account_type'];
         
-        if ($password !== $confirm_password) 
-        {
-            echo "Mật khẩu không khớp";
-            return;
-        }
+//         if ($password !== $confirm_password) 
+//         {
+//             echo "Mật khẩu không khớp";
+//             return;
+//         }
 
-        $conn = connect_db();
+//         $conn = connect_db();
 
-        if (check_username_exists($conn, $username)) 
-        {
-            echo "Tài khoản đã tồn tại";
-        } else {
-            if (register_user($conn, $username, $password, $account_type)) 
-            {
-                echo "Đăng ký thành công";
-            } 
-            else 
-            {
-                echo "Đăng ký thất bại: " . mysqli_error($conn);
-            }
-        }
+//         if (check_username_exists($conn, $username)) 
+//         {
+//             echo "Tài khoản đã tồn tại";
+//         } else {
+//             if (register_user($conn, $username, $password, $account_type)) 
+//             {
+//                 echo "Đăng ký thành công";
+//             } 
+//             else 
+//             {
+//                 echo "Đăng ký thất bại: " . mysqli_error($conn);
+//             }
+//         }
 
-        mysqli_close($conn);
-    }
-}
+//         mysqli_close($conn);
+//     }
+// }
 
 function save_token($conn, $email, $token) {
     date_default_timezone_set('Asia/Ho_Chi_Minh');
@@ -173,13 +173,52 @@ function logout(){
     exit;
 }
 
-function delete_account($conn, $username){
-    $delete_sql = "DELETE FROM users WHERE username = '$username'";
-    return mysqli_query($conn, $delete_sql);
+// Admin
+// Hàm thêm ngành mới
+function createProgram($program_name, $admission_block, $start_date, $end_date, $is_visible) {
+    global $conn;
+    $sql = "INSERT INTO programs (program_name, admission_block, start_date, end_date, is_visible) 
+            VALUES ('$program_name', '$admission_block', '$start_date', '$end_date', '$is_visible')";
+    return mysqli_query($conn, $sql) ? "Ngành đã được tạo thành công!" : "Có lỗi xảy ra. Vui lòng thử lại.";
 }
 
-function update_account($conn, $old_username, $new_username, $new_password, $account_type){
-    $update_sql = "UPDATE users SET username = '$new_username', password = '$new_password', account_type = '$account_type' WHERE username = '$old_username'";
-    return mysqli_query($conn, $update_sql);
+// Hàm cập nhật thông tin ngành
+function updateProgram($program_id, $program_name, $admission_block, $start_date, $end_date) {
+    global $conn;
+    $sql = "UPDATE programs SET 
+            program_name='$program_name', 
+            admission_block='$admission_block', 
+            start_date='$start_date', 
+            end_date='$end_date' 
+            WHERE id='$program_id'";
+    return mysqli_query($conn, $sql) ? "Thông tin ngành đã được cập nhật thành công!" : "Có lỗi xảy ra. Vui lòng thử lại.";
+}
+
+// Hàm xoá ngành
+function deleteProgram($program_id) {
+    global $conn;
+    $sql = "DELETE FROM programs WHERE id='$program_id'";
+    return mysqli_query($conn, $sql) ? "Ngành đã được xóa thành công!" : "Có lỗi xảy ra. Vui lòng thử lại.";
+}
+
+// Hàm thay đổi trạng thái hiển thị ngành
+function toggleProgramVisibility($program_id, $is_visible) {
+    global $conn;
+    $new_visibility = $is_visible ? 0 : 1;
+    $sql = "UPDATE programs SET is_visible='$new_visibility' WHERE id='$program_id'";
+    return mysqli_query($conn, $sql) ? "Trạng thái đã được cập nhật thành công!" : "Có lỗi xảy ra. Vui lòng thử lại.";
+}
+
+// Hàm lấy danh sách các ngành
+function getAllPrograms($account_type) {
+    global $conn;
+    if ($account_type == 'hs') {
+        // Nếu là học sinh, chỉ lấy các trường cần thiết và chỉ lấy những chương trình đang hiển thị
+        $sql = "SELECT id, program_name, admission_block, start_date, end_date FROM programs WHERE is_visible = 1";
+    } else {
+        // Nếu không phải học sinh, lấy tất cả các trường
+        $sql = "SELECT * FROM programs";
+    }
+    return mysqli_query($conn, $sql);;
 }
 ?>

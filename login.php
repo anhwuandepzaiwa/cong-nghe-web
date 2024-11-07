@@ -1,7 +1,6 @@
 <?php
     session_start();
     include 'functions.php';
-    $conn = connect_db();
 
     // Khởi tạo số lần thử đăng nhập nếu chưa có
     if (!isset($_SESSION['login_attempts'])) {
@@ -52,7 +51,7 @@
                         $_SESSION['login_attempts'] = 0;
     
                         // Điều hướng sang trang chủ
-                        header("Location: home.php");
+                        header("Location: trang_chu.php");
                         exit;
                     } 
                     else 

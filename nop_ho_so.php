@@ -11,6 +11,8 @@ if (!isset($_SESSION['username'])) {
 $account_type = $_SESSION['account_type'];
 $user_id = $_SESSION['user_id'];
 
+$program_id = $_SESSION['program_id'];
+
 ?>
 
 <!DOCTYPE html>
@@ -77,15 +79,15 @@ $user_id = $_SESSION['user_id'];
         <div class="menu">
 
         <ul class="menu-links">
-            <li class="nav-link" style="background-color: #db1225; border-radius: 10px">
+            <li class="nav-link">
             <a href="trang_chu.php">
                 <i class='bx bx-home-alt icon'></i>
                 <span class="text nav-text">Trang chủ</span>
             </a>
             </li>
 
-            <li class="nav-link">
-            <a href="nop_ho_so.php">
+            <li class="nav-link" style="background-color: #db1225; border-radius: 10px">
+            <a href="#">
                 <i class='bx bx-bar-chart-alt-2 icon'></i>
                 <span class="text nav-text">Nộp hồ sơ chi tiết</span>
             </a>
@@ -131,25 +133,25 @@ $user_id = $_SESSION['user_id'];
 </nav>
 
 <section class="home" style="margin-left: 10px;">
-    <div class="text">Chào mừng <?php echo $_SESSION['username']; ?></div>
-    <?php if ($account_type == 'admin'): ?>
-        <button id="createProgramBtn">Tạo Ngành Xét Tuyển</button>
-            <div id="createProgramForm" style="display: none;">
-                <form action="" method="POST">
-                    <h2>Tạo Ngành Xét Tuyển</h2>
-                    Tên ngành:<input type="text" id="program_name" name="program_name" required placeholder="Nhập tên ngành"><br>
-                    Khối xét tuyển:<input type="text" id="admission_block" name="admission_block" required placeholder="VD: A00, A01, C00"><br>
-                    Thời gian bắt đầu:<input type="date" id="start_date" name="start_date" required><br>
-                    Thời gian kết thúc:<input type="date" id="end_date" name="end_date" required><br>
-                    Trạng thái hiển thị:<select id="is_visible" name="is_visible" required>
-                        <option value="1">Hiển Thị</option>
-                        <option value="0">Ẩn</option>
-                    </select><br>
-                    <input type="submit" name="create" value="Tạo ngành">
-                    <button type="button" id="cancelBtn">Hủy</button>
-                </form>
-            </div>
-    <?php endif; ?>
+    <div class="text">Chào mừng <?php echo $_SESSION['username']; echo $program_id?></div>
+    <?php if ($account_type == 'hs'): ?>
+    <button id="createProgramBtn">Nộp Hồ Sơ Xét Tuyển</button>
+    <div id="createProgramForm" style="display: none;">
+    <form action="" method="POST">
+            Chọn khối xét tuyển:
+            <select name="admission_block" required>
+                <option value="A00">A00</option>
+                <option value="A01">A01</option>
+                <option value="C00">C00</option>
+            </select><br>
+            Điểm môn Toán: <input type="number" name="math_score" required><br>
+            Điểm môn Văn: <input type="number" name="literature_score" required><br>
+            <input type="submit" value="Nộp Hồ Sơ">
+            <button type="button" id="cancelBtn">Hủy</button>
+        </form>
+    </div>
+<?php endif; ?>
+
 
 <?php
 include 'functions.php';
@@ -265,8 +267,8 @@ elseif(isset($_POST['assign_teacher']))
                 ?>
                 <td>
                     <?php if ($isApplicationOpen): ?>
-                        <form action="nop_ho_so.php" method="POST" style="display:inline;">
-                            <input type="hidden" name="program_id" value="<?php $_SESSION['program_id'] = $row['id'];echo $row['id']; ?>">
+                        <form action="apply.php" method="POST" style="display:inline;">
+                            <input type="hidden" name="program_id" value="<?php echo $row['id']; ?>">
                             <input type="submit" name="apply" value="Nộp Hồ Sơ">
                         </form>
                     <?php else: ?>

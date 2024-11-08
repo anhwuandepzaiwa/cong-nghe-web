@@ -77,7 +77,7 @@ $user_id = $_SESSION['user_id'];
         <div class="menu">
 
         <ul class="menu-links">
-            <li class="nav-link" style="background-color: #db1225; border-radius: 10px">
+            <li class="nav-link">
             <a href="trang_chu.php">
                 <i class='bx bx-home-alt icon'></i>
                 <span class="text nav-text">Trang chủ</span>
@@ -98,7 +98,7 @@ $user_id = $_SESSION['user_id'];
             </a>
             </li>
 
-            <li class="nav-link">
+            <li class="nav-link" style="background-color: #db1225; border-radius: 10px">
             <a href="thong_ke_so_luong_ho_so.php">
                 <i class='bx bx-pie-chart-alt icon'></i>
                 <span class="text nav-text">Thống kê hồ sơ</span>
@@ -265,8 +265,8 @@ elseif(isset($_POST['assign_teacher']))
                 ?>
                 <td>
                     <?php if ($isApplicationOpen): ?>
-                        <form action="nop_ho_so.php" method="POST" style="display:inline;">
-                            <input type="hidden" name="program_id" value="<?php $_SESSION['program_id'] = $row['id'];echo $row['id']; ?>">
+                        <form action="apply.php" method="POST" style="display:inline;">
+                            <input type="hidden" name="program_id" value="<?php echo $row['id']; ?>">
                             <input type="submit" name="apply" value="Nộp Hồ Sơ">
                         </form>
                     <?php else: ?>

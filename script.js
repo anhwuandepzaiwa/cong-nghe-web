@@ -31,3 +31,4 @@ createProgramBtn.addEventListener('click', () => {
 document.getElementById('cancelBtn').addEventListener('click', function() {
   document.getElementById('createProgramForm').reset(); // Reset form nếu muốn
 });
+

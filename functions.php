@@ -1,7 +1,7 @@
 <?php
 // Hàm kết nối CSDL
 function connect_db(){
-    $servername = "localhost:3307";
+    $servername = "localhost";
     $username = "root";
     $password = "";
     $dbname = "project";
@@ -177,32 +177,60 @@ function logout(){
 // Hàm thêm ngành mới
 function createProgram($program_name, $admission_block, $start_date, $end_date, $is_visible) {
     global $conn;
+
+    // Kiểm tra nếu thời gian bắt đầu lớn hơn thời gian kết thúc
     if ($start_date > $end_date) {
         echo "<p style='color: red;'>Thời gian bắt đầu không được lớn hơn thời gian kết thúc!</p>";
     } else {
-        $sql = "INSERT INTO programs (program_name, admission_block, start_date, end_date, is_visible) 
-            VALUES ('$program_name', '$admission_block', '$start_date', '$end_date', '$is_visible')";
-        return mysqli_query($conn, $sql) ? "Ngành đã được tạo thành công!" : "Có lỗi xảy ra. Vui lòng thử lại.";
+        // Bước 1: Thêm chương trình vào bảng `programs` (không có admission_block)
+        $sql = "INSERT INTO programs (program_name, start_date, end_date, is_visible) 
+                VALUES ('$program_name', '$start_date', '$end_date', '$is_visible')";
+        
+        if (mysqli_query($conn, $sql)) {
+            // Bước 2: Lấy ID của chương trình mới thêm vào
+            $program_id = mysqli_insert_id($conn);
+            
+            // Bước 3: Thêm admission_block vào bảng `program_blocks`
+            $sqlBlock = "INSERT INTO program_blocks (program_id, admission_block) 
+                         VALUES ('$program_id', '$admission_block')";
+            
+            if (mysqli_query($conn, $sqlBlock)) {
+                return "Ngành và khối xét tuyển đã được tạo thành công!";
+            } else {
+                return "Có lỗi xảy ra khi thêm khối xét tuyển. Vui lòng thử lại.";
+            }
+        } else {
+            return "Có lỗi xảy ra khi tạo chương trình. Vui lòng thử lại.";
+        }
     }
-    
 }
+
 
 // Hàm cập nhật thông tin ngành
 function updateProgram($program_id, $program_name, $admission_block, $start_date, $end_date) {
     global $conn;
-    if ($start_date > $end_date) 
-    {
+
+    // Kiểm tra thời gian bắt đầu không lớn hơn thời gian kết thúc
+    if ($start_date > $end_date) {
         echo "<p style='color: red;'>Thời gian bắt đầu không được lớn hơn thời gian kết thúc!</p>";
-    }
-    else 
-    {
+    } else {
+        // Cập nhật thông tin chương trình trong bảng `programs`
         $sql = "UPDATE programs SET 
-            program_name='$program_name', 
-            admission_block='$admission_block', 
-            start_date='$start_date', 
-            end_date='$end_date' 
-            WHERE id='$program_id'";
-        return mysqli_query($conn, $sql) ? "Thông tin ngành đã được cập nhật thành công!" : "Có lỗi xảy ra. Vui lòng thử lại.";
+                program_name='$program_name', 
+                start_date='$start_date', 
+                end_date='$end_date' 
+                WHERE id='$program_id'";
+
+        if (mysqli_query($conn, $sql)) {
+            // Cập nhật admission_block trong bảng `program_blocks`
+            $sqlBlock = "UPDATE program_blocks SET 
+                         admission_block='$admission_block' 
+                         WHERE program_id='$program_id'";
+
+            return mysqli_query($conn, $sqlBlock) ? "Thông tin ngành đã được cập nhật thành công!" : "Có lỗi xảy ra khi cập nhật khối xét tuyển.";
+        } else {
+            return "Có lỗi xảy ra khi cập nhật thông tin ngành. Vui lòng thử lại.";
+        }
     }
 }
 
@@ -224,26 +252,30 @@ function toggleProgramVisibility($program_id, $is_visible) {
 // Hàm lấy danh sách các ngành
 function getAllPrograms($account_type, $user_id) {
     global $conn;
-    if ($account_type == 'hs') {
-        // Nếu là học sinh, chỉ lấy các trường cần thiết và chỉ lấy những chương trình đang hiển thị
-        $sql = "SELECT id, program_name, admission_block, start_date, end_date FROM programs WHERE is_visible = 1";
-    } 
-    elseif ($account_type == 'gv') 
-    {
-        $sql = "SELECT p.id, p.program_name, p.admission_block, p.start_date, p.end_date, p.is_visible 
-            FROM programs p 
-            JOIN program_teachers pt ON p.id = pt.program_id 
-            WHERE pt.teacher_id = $user_id";
 
-        return mysqli_query($conn, $sql);
+    if ($account_type == 'hs') {
+        // Nếu là học sinh, chỉ lấy các chương trình đang hiển thị
+        $sql = "SELECT p.id, p.program_name, pb.admission_block, p.start_date, p.end_date 
+                FROM programs p 
+                JOIN program_blocks pb ON p.id = pb.program_id 
+                WHERE p.is_visible = 1";
+    } elseif ($account_type == 'gv') {
+        // Nếu là giáo viên, lấy danh sách các ngành mà giáo viên được phép dạy
+        $sql = "SELECT p.id, p.program_name, pb.admission_block, p.start_date, p.end_date, p.is_visible 
+                FROM programs p 
+                JOIN program_blocks pb ON p.id = pb.program_id
+                JOIN program_teachers pt ON p.id = pt.program_id 
+                WHERE pt.teacher_id = $user_id";
+    } else {
+        // Lấy tất cả chương trình
+        $sql = "SELECT p.id, p.program_name, pb.admission_block, p.start_date, p.end_date, p.is_visible 
+                FROM programs p 
+                JOIN program_blocks pb ON p.id = pb.program_id";
     }
-    else 
-    {
-        // Nếu không phải học sinh, lấy tất cả các trường
-        $sql = "SELECT * FROM programs";
-    }
+
     return mysqli_query($conn, $sql);
 }
+
 
 function getTeacherOptions() {
     global $conn;
@@ -257,13 +289,31 @@ function getTeacherOptions() {
 
 function updateProgramForTeacher($program_id, $program_name, $admission_block, $start_date, $end_date) {
     global $conn;
+
+    // Cập nhật thông tin chương trình trong bảng `programs`
     $sql = "UPDATE programs SET 
             program_name='$program_name', 
-            admission_block='$admission_block', 
             start_date='$start_date', 
             end_date='$end_date' 
             WHERE id='$program_id'";
-    return mysqli_query($conn, $sql) ? "Thông tin ngành đã được cập nhật thành công!" : "Có lỗi xảy ra. Vui lòng thử lại.";
+
+    if (mysqli_query($conn, $sql)) {
+        // Cập nhật admission_block trong bảng `program_blocks`
+        $sqlBlock = "UPDATE program_blocks SET 
+                     admission_block='$admission_block' 
+                     WHERE program_id='$program_id'";
+
+        return mysqli_query($conn, $sqlBlock) ? "Thông tin ngành đã được cập nhật thành công!" : "Có lỗi xảy ra khi cập nhật khối xét tuyển.";
+    } else {
+        return "Có lỗi xảy ra khi cập nhật thông tin ngành. Vui lòng thử lại.";
+    }
+}
+
+// Hàm lấy danh sách các khối theo chương trình
+function getAdmissionBlocks($program_id) {
+    global $conn;
+    $sql = "SELECT admission_block FROM program_blocks WHERE program_id = $program_id";
+    return mysqli_query($conn, $sql);
 }
 
 ?>

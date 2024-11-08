@@ -219,6 +219,15 @@ function getAllPrograms($account_type) {
         // Nếu không phải học sinh, lấy tất cả các trường
         $sql = "SELECT * FROM programs";
     }
-    return mysqli_query($conn, $sql);;
+    return mysqli_query($conn, $sql);
 }
+
+function getAllTeachers() {
+    global $conn;
+    $sql = "SELECT id, username FROM users WHERE account_type = 'gv'";
+    return mysqli_query($conn, $sql);
+}
+
 ?>
+
+

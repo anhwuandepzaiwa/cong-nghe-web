@@ -194,13 +194,14 @@ elseif (isset($_POST['delete']))
         <?php if ($account_type == 'admin'): ?>
             <th>Trạng Thái</th>
             <th>Hành Động</th>
+            <th>Giáo Viên Phụ Trách</th>
         <?php elseif ($account_type == 'hs'): ?>
             <th>Hành Động</th>
         <?php endif; ?>
     </tr>
     <?php
         $result = getAllPrograms($account_type);
-
+        $allTeachers = getAllTeachers();
         while ($row = mysqli_fetch_assoc($result)):
             // Skip hidden programs for students
             // if ($account_type == 'hs' && !$row['is_visible']) {
@@ -228,11 +229,32 @@ elseif (isset($_POST['delete']))
                         <input type="submit" name="delete" value="Xóa">
                     </form>
                 </td>
+                <td>
+                    <form action="" method="POST">
+                        <input type="hidden" name="program_id" value="<?php echo $row['id']; ?>">
+                        <select name="teacher_id" onchange="this.form.submit()">
+                            <option value="">Chọn giáo viên</option>
+                            <?php while ($teacher = mysqli_fetch_assoc($allTeachers)): ?>
+                                <option value="<?php echo $teacher['id']; ?>" <?php echo $row['teacher_id'] == $teacher['id'] ? 'selected' : ''; ?>>
+                                    <?php echo $teacher['name']; ?>
+                                </option>
+                            <?php endwhile; ?>
+                        </select>
+                    </form>
+                </td>
             <?php elseif ($account_type == 'hs'): ?>
                 <td>
                     <form action="apply.php" method="POST" style="display:inline;">
                         <input type="hidden" name="program_id" value="<?php echo $row['id']; ?>">
                         <input type="submit" name="apply" value="Nộp Hồ Sơ">
+                    </form>
+                </td>
+            <?php elseif ($account_type == 'gv'): ?>
+                <td>
+                    <form action="" method="POST" style="display:inline;">
+                        <input type="hidden" name="application_id" value="<?php echo $row['id']; ?>">
+                        <input type="submit" name="approve" value="Duyệt">
+                        <input type="submit" name="reject" value="Không Duyệt">
                     </form>
                 </td>
             <?php endif; ?>

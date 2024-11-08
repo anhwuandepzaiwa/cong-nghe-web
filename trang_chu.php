@@ -8,7 +8,9 @@ if (!isset($_SESSION['username'])) {
 }
 
 // Kiểm tra quyền của người dùng
-$account_type = $_SESSION['account_type']
+$account_type = $_SESSION['account_type'];
+$user_id = $_SESSION['user_id'];
+
 ?>
 
 <!DOCTYPE html>
@@ -63,13 +65,8 @@ $account_type = $_SESSION['account_type']
 <body>
     <nav class="sidebar close">
     <header>
-        <div class="image-text">
-        <span class="image">
-            <img src="https://drive.google.com/uc?export=view&id=1ETZYgPpWbbBtpJnhi42_IR3vOwSOpR4z" alt="">
-        </span>
-
         <div class="text logo-text">
-            <span class="name">Admin</span>
+            <span class="name"><?php echo $_SESSION['username']; ?></span>
         </div>
         </div>
 
@@ -112,7 +109,7 @@ $account_type = $_SESSION['account_type']
 
         <div class="bottom-content">
         <li class="">
-            <a href="#">
+            <a href="logout.php">
             <i class='bx bx-log-out icon'></i>
             <span class="text nav-text">Logout</span>
             </a>
@@ -124,18 +121,17 @@ $account_type = $_SESSION['account_type']
             <i class='bx bx-sun icon sun'></i>
             </div>
             <span class="mode-text text">Dark mode</span>
-
             <div class="toggle-switch">
             <span class="switch"></span>
             </div>
         </li>
-
+        
         </div>
     </div>
 </nav>
 
 <section class="home" style="margin-left: 10px;">
-    <div class="text">Chào mừng admin</div>
+    <div class="text">Chào mừng <?php echo $_SESSION['username']; ?></div>
     <?php if ($account_type == 'admin'): ?>
         <button id="createProgramBtn">Tạo Ngành Xét Tuyển</button>
             <div id="createProgramForm" style="display: none;">
@@ -182,6 +178,27 @@ elseif (isset($_POST['delete']))
     $message = deleteProgram($_POST['program_id']);
     echo "<p>$message</p>";
 }
+elseif(isset($_POST['assign_teacher']))
+{
+    // Phân quyền giáo viên
+    $teacher_id = $_POST['teacher_id'];
+    $program_id = $_POST['program_id'];
+    $check_sql = "SELECT * FROM program_teachers WHERE teacher_id = $teacher_id AND program_id = $program_id";
+    $check_result = mysqli_query($conn, $check_sql);
+
+    if (mysqli_num_rows($check_result) > 0) {
+        // Record already exists
+        echo "Giáo viên đã được phân quyền cho ngành này!";
+    } else {
+        // If not assigned, proceed to assign
+        $sql = "INSERT INTO program_teachers (teacher_id, program_id) VALUES ($teacher_id, $program_id)";
+        if (mysqli_query($conn, $sql)) {
+            echo "Giáo viên đã được phân quyền cho ngành!";
+        } else {
+            echo "Lỗi phân quyền giáo viên!";
+        }
+    }
+}
 ?>
 
 <h2>Các Ngành Đã Tạo</h2>
@@ -199,13 +216,9 @@ elseif (isset($_POST['delete']))
         <?php endif; ?>
     </tr>
     <?php
-        $result = getAllPrograms($account_type);
+        $result = getAllPrograms($account_type, $user_id);
 
         while ($row = mysqli_fetch_assoc($result)):
-            // Skip hidden programs for students
-            // if ($account_type == 'hs' && !$row['is_visible']) {
-            //     continue;
-            // }
     ?>
         <tr>
             <td><?php echo $row['program_name']; ?></td>
@@ -228,11 +241,42 @@ elseif (isset($_POST['delete']))
                         <input type="submit" name="delete" value="Xóa">
                     </form>
                 </td>
-            <?php elseif ($account_type == 'hs'): ?>
                 <td>
-                    <form action="apply.php" method="POST" style="display:inline;">
+                    <form action="" method="POST">
+                        Giáo Viên:
+                        <select name="teacher_id">
+                            <?php echo getTeacherOptions(); ?>
+                        </select>
                         <input type="hidden" name="program_id" value="<?php echo $row['id']; ?>">
-                        <input type="submit" name="apply" value="Nộp Hồ Sơ">
+                        <input type="submit" name="assign_teacher" value="Phân Quyền">
+                    </form>
+                </td>
+                <td>
+                    <form action="view_application.php" method="POST" style="display:inline;">
+                        <input type="hidden" name="program_id" value="<?php echo $row['id']; ?>">
+                        <input type="submit" name="view_application" value="Xem Hồ Sơ">
+                    </form>
+                </td>
+            <?php elseif ($account_type == 'hs'): ?>
+                <?php
+                    $currentDate = date("Y-m-d");
+                    $isApplicationOpen = ($currentDate >= $row['start_date'] && $currentDate <= $row['end_date']);
+                ?>
+                <td>
+                    <?php if ($isApplicationOpen): ?>
+                        <form action="apply.php" method="POST" style="display:inline;">
+                            <input type="hidden" name="program_id" value="<?php echo $row['id']; ?>">
+                            <input type="submit" name="apply" value="Nộp Hồ Sơ">
+                        </form>
+                    <?php else: ?>
+                        <span>Đã hết hạn nộp hồ sơ</span>
+                    <?php endif; ?>
+                </td>
+            <?php elseif ($account_type == 'gv'): ?>
+                <td>
+                    <form action="view_application.php" method="POST" style="display:inline;">
+                        <input type="hidden" name="program_id" value="<?php echo $row['id']; ?>">
+                        <input type="submit" name="view_application" value="Xem Hồ Sơ">
                     </form>
                 </td>
             <?php endif; ?>

@@ -1,6 +1,6 @@
 <?php
 session_start();
-
+include 'functions.php';
 // Kiểm tra người dùng đã đăng nhập hay chưa
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
@@ -10,9 +10,8 @@ if (!isset($_SESSION['username'])) {
 // Kiểm tra quyền của người dùng
 $account_type = $_SESSION['account_type'];
 $user_id = $_SESSION['user_id'];
-
 $program_id = $_SESSION['program_id'];
-
+$admission_blocks = getAdmissionBlocks($program_id);
 ?>
 
 <!DOCTYPE html>
@@ -133,20 +132,21 @@ $program_id = $_SESSION['program_id'];
 </nav>
 
 <section class="home" style="margin-left: 10px;">
-    <div class="text">Chào mừng <?php echo $_SESSION['username']; echo $program_id?></div>
+    <div class="text">Chào mừng <?php echo $_SESSION['username']; echo $program_id;?></div>
     <?php if ($account_type == 'hs'): ?>
     <button id="createProgramBtn">Nộp Hồ Sơ Xét Tuyển</button>
     <div id="createProgramForm" style="display: none;">
-    <form action="" method="POST">
-            Chọn khối xét tuyển:
+        <form action="" method="POST" enctype="multipart/form-data">
             <select name="admission_block" required>
-                <option value="A00">A00</option>
-                <option value="A01">A01</option>
-                <option value="C00">C00</option>
+                <option value="">Chọn khối xét tuyển</option>
+                <?php foreach ($admission_blocks as $block): ?>
+                    <option value="<?php echo $block; ?>"><?php echo $block; ?></option>
+                <?php endforeach; ?>
             </select><br>
-            Điểm môn Toán: <input type="number" name="math_score" required><br>
-            Điểm môn Văn: <input type="number" name="literature_score" required><br>
-            <input type="submit" value="Nộp Hồ Sơ">
+            <div id="scoreFields"></div>
+            Upload ảnh học bạ:
+            <input type="file" id="transcript_image" name="transcript_image" accept=".jpg, .jpeg, .png" required><br>
+            <input type="submit" name="submit" value="Nộp Hồ Sơ">
             <button type="button" id="cancelBtn">Hủy</button>
         </form>
     </div>
@@ -154,7 +154,7 @@ $program_id = $_SESSION['program_id'];
 
 
 <?php
-include 'functions.php';
+//include 'functions.php';
 
 if (isset($_POST['create'])) 
 {
@@ -201,99 +201,95 @@ elseif(isset($_POST['assign_teacher']))
         }
     }
 }
+if (isset($_POST['submit'])) {
+    $admission_block = $_POST['admission_block'];
+    $scores = [
+        'toan'  => isset($_POST['math_score']) ? $_POST['math_score'] : null,
+        'ly'    => isset($_POST['physics_score']) ? $_POST['physics_score'] : null,
+        'hoa'   => isset($_POST['chemistry_score']) ? $_POST['chemistry_score'] : null,
+        'anh'   => isset($_POST['english_score']) ? $_POST['english_score'] : null,
+        'van'   => isset($_POST['literature_score']) ? $_POST['literature_score'] : null,
+        'su'    => isset($_POST['history_score']) ? $_POST['history_score'] : null,
+        'dia'   => isset($_POST['geography_score']) ? $_POST['geography_score'] : null,
+        'sinh'  => isset($_POST['biology_score']) ? $_POST['biology_score'] : null
+    ];
+    
+    // Kiểm tra hồ sơ trùng lặp
+    if (isApplicationExists($user_id, $program_id, $admission_block)) {
+        echo "Hồ sơ đã được nộp vào khối xét tuyển này.";
+    } else {
+        // Upload ảnh học bạ
+        $message = uploadTranscriptImage($_FILES['transcript_image']);
+        if (strpos($message, "thành công") !== false) {
+            $transcript_image_path = "uploads/" . $_FILES['transcript_image']['name']; // Đường dẫn ảnh học bạ
+
+            // Lưu hồ sơ vào bảng `applications`
+            saveApplication($user_id, $program_id, $admission_block, $scores, $transcript_image_path);
+            echo "Nộp hồ sơ thành công!";
+        } else {
+            echo $message;  // Hiển thị lỗi nếu không thể upload ảnh
+        }
+    } 
+}
 ?>
 
-<h2>Các Ngành Đã Tạo</h2>
+<h2>Hồ Sơ Học Sinh Đã Nộp</h2>
 <table border="1">
     <tr>
-        <th>Tên Ngành</th>
-        <th>Khối Xét Tuyển</th>
-        <th>Thời Gian Bắt Đầu</th>
-        <th>Thời Gian Kết Thúc</th>
+        <th>STT</th>
+        <th>Họ tên học sinh</th>
+        <th>Tên ngành nộp hồ sơ</th>
+        <th>Tên khối xét hồ sơ</th>
+        <th>Tên người duyệt hồ sơ</th>
+        <th>Trạng thái hồ sơ</th>
         <?php if ($account_type == 'admin'): ?>
-            <th>Trạng Thái</th>
             <th>Hành Động</th>
-            <th>Giáo Viên Phụ Trách</th>
         <?php elseif ($account_type == 'hs'): ?>
+            <th>Hành Động</th>
+        <?php elseif ($account_type == 'gv'): ?>
             <th>Hành Động</th>
         <?php endif; ?>
     </tr>
     <?php
-        $result = getAllPrograms($account_type, $user_id);
+       // $result = getStudentApplications($account_type, $user_id);
 
         while ($row = mysqli_fetch_assoc($result)):
     ?>
         <tr>
-            <td><?php echo $row['program_name']; ?></td>
-            <td><?php echo $row['admission_block']; ?></td>
-            <td><?php echo $row['start_date']; ?></td>
-            <td><?php echo $row['end_date']; ?></td>
+            <td><?php echo $row['application_id']; ?></td>
+            <td><?php echo htmlspecialchars($row['student_name']); ?></td>
+            <td><?php echo htmlspecialchars($row['program_name']); ?></td>
+            <td><?php echo htmlspecialchars($row['admission_block']); ?></td>
+            <td><?php echo htmlspecialchars($row['reviewer_name']); ?></td>
+            <td><?php echo htmlspecialchars($row['status']); ?></td>
             <?php if ($account_type == 'admin'): ?>
-                <td><?php echo $row['is_visible'] ? 'Hiển Thị' : 'Ẩn'; ?></td>
-            <?php endif; ?>
-            <?php if ($account_type == 'admin'): ?>
                 <td>
-                    <form action="" method="POST" style="display:inline;">
-                        <input type="hidden" name="program_id" value="<?php echo $row['id']; ?>">
-                        <input type="hidden" name="is_visible" value="<?php echo $row['is_visible']; ?>">
-                        <input type="submit" name="toggle_visibility" value="<?php echo $row['is_visible'] ? 'Ẩn' : 'Hiển Thị'; ?>">
-                    </form>
-                    <button type="button" onclick="showEditForm(<?php echo $row['id']; ?>, '<?php echo $row['program_name']; ?>', '<?php echo $row['admission_block']; ?>', '<?php echo $row['start_date']; ?>', '<?php echo $row['end_date']; ?>')">Sửa</button>
-                    <form action="" method="POST" style="display:inline;" onsubmit="return confirm('Bạn có chắc chắn muốn xóa ngành này?');">
-                        <input type="hidden" name="program_id" value="<?php echo $row['id']; ?>">
-                        <input type="submit" name="delete" value="Xóa">
-                    </form>
-                </td>
-                <td>
-                    <form action="" method="POST">
-                        Giáo Viên:
-                        <select name="teacher_id">
-                            <?php echo getTeacherOptions(); ?>
-                        </select>
-                        <input type="hidden" name="program_id" value="<?php echo $row['id']; ?>">
-                        <input type="submit" name="assign_teacher" value="Phân Quyền">
-                    </form>
-                </td>
-                <td>
-                    <form action="view_application.php" method="POST" style="display:inline;">
-                        <input type="hidden" name="program_id" value="<?php echo $row['id']; ?>">
-                        <input type="submit" name="view_application" value="Xem Hồ Sơ">
-                    </form>
-                </td>
-            <?php elseif ($account_type == 'hs'): ?>
-                <?php
-                    $currentDate = date("Y-m-d");
-                    $isApplicationOpen = ($currentDate >= $row['start_date'] && $currentDate <= $row['end_date']);
-                ?>
-                <td>
-                    <?php if ($isApplicationOpen): ?>
-                        <form action="apply.php" method="POST" style="display:inline;">
-                            <input type="hidden" name="program_id" value="<?php echo $row['id']; ?>">
-                            <input type="submit" name="apply" value="Nộp Hồ Sơ">
-                        </form>
-                    <?php else: ?>
-                        <span>Đã hết hạn nộp hồ sơ</span>
-                    <?php endif; ?>
-                </td>
-            <?php elseif ($account_type == 'gv'): ?>
-                <td>
-                    <form action="view_application.php" method="POST" style="display:inline;">
-                        <input type="hidden" name="program_id" value="<?php echo $row['id']; ?>">
-                        <input type="submit" name="view_application" value="Xem Hồ Sơ">
-                    </form>
-                </td>
-            <?php elseif ($account_type == 'gv'): ?>
-                <td>
-                    <form action="" method="POST" style="display:inline;">
-                        <input type="hidden" name="application_id" value="<?php echo $row['id']; ?>">
+                    <form action="manage_applications.php" method="POST" style="display:inline;">
+                        <input type="hidden" name="application_id" value="<?php echo $row['application_id']; ?>">
                         <input type="submit" name="approve" value="Duyệt">
                         <input type="submit" name="reject" value="Không Duyệt">
+                    </form>
+                    <button type="button" onclick="viewApplicationDetails(<?php echo $row['application_id']; ?>)">Xem chi tiết</button>
+                </td>
+            <?php elseif ($account_type == 'hs'): ?>
+                <td>
+                    <form action="view_application.php" method="POST">
+                        <input type="hidden" name="application_id" value="<?php echo $row['application_id']; ?>">
+                        <input type="submit" name="view_application" value="Xem Hồ Sơ">
+                    </form>
+                </td>
+            <?php elseif ($account_type == 'gv'): ?>
+                <td>
+                    <form action="view_application.php" method="POST">
+                        <input type="hidden" name="application_id" value="<?php echo $row['application_id']; ?>">
+                        <input type="submit" name="view_application" value="Xem Hồ Sơ">
                     </form>
                 </td>
             <?php endif; ?>
         </tr>
     <?php endwhile; ?>
 </table>
+
 
 <?php if ($account_type == 'admin'): ?>
     <div id="editProgramForm" style="display:none;">
@@ -317,14 +313,35 @@ elseif(isset($_POST['assign_teacher']))
     document.getElementById("cancelBtn").onclick = function() {
         document.getElementById("createProgramForm").style.display = "none";
     }
-    function showEditForm(id, name, block, start, end) {
-        document.getElementById('edit_program_id').value = id;
-        document.getElementById('edit_program_name').value = name;
-        document.getElementById('edit_admission_block').value = block;
-        document.getElementById('edit_start_date').value = start;
-        document.getElementById('edit_end_date').value = end;
-        document.getElementById('editProgramForm').style.display = 'block';
-    }
+    document.querySelector('[name="admission_block"]').addEventListener('change', function() {
+    var selectedBlock = this.value;
+    var scoreFields = document.getElementById('scoreFields');
+    scoreFields.innerHTML = ''; // Xóa các trường cũ trước khi thêm trường mới
+
+    if (selectedBlock === 'A00') {
+    scoreFields.innerHTML += 'Điểm môn Toán: <input type="number" name="math_score" required><br>';
+    scoreFields.innerHTML += 'Điểm môn Lý: <input type="number" name="physics_score" required><br>';
+    scoreFields.innerHTML += 'Điểm môn Hóa: <input type="number" name="chemistry_score" required><br>';
+} else if (selectedBlock === 'A01') {
+    scoreFields.innerHTML += 'Điểm môn Toán: <input type="number" name="math_score" required><br>';
+    scoreFields.innerHTML += 'Điểm môn Lý: <input type="number" name="physics_score" required><br>';
+    scoreFields.innerHTML += 'Điểm môn Anh: <input type="number" name="english_score" required><br>';
+} else if (selectedBlock === 'C00') {
+    scoreFields.innerHTML += 'Điểm môn Văn: <input type="number" name="literature_score" required><br>';
+    scoreFields.innerHTML += 'Điểm môn Sử: <input type="number" name="history_score" required><br>';
+    scoreFields.innerHTML += 'Điểm môn Địa: <input type="number" name="geography_score" required><br>';
+} else if (selectedBlock === 'D01') {
+    scoreFields.innerHTML += 'Điểm môn Toán: <input type="number" name="math_score" required><br>';
+    scoreFields.innerHTML += 'Điểm môn Văn: <input type="number" name="literature_score" required><br>';
+    scoreFields.innerHTML += 'Điểm môn Anh: <input type="number" name="english_score" required><br>';
+} else if (selectedBlock === 'B00') {
+    scoreFields.innerHTML += 'Điểm môn Toán: <input type="number" name="math_score" required><br>';
+    scoreFields.innerHTML += 'Điểm môn Hóa: <input type="number" name="chemistry_score" required><br>';
+    scoreFields.innerHTML += 'Điểm môn Sinh: <input type="number" name="biology_score" required><br>';
+}
+
+});
+
 </script>
 
 </section>

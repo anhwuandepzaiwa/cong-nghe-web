@@ -309,12 +309,127 @@ function updateProgramForTeacher($program_id, $program_name, $admission_block, $
     }
 }
 
-// Hàm lấy danh sách các khối theo chương trình
+// Hàm lấy danh sách các khối theo program_id
 function getAdmissionBlocks($program_id) {
     global $conn;
     $sql = "SELECT admission_block FROM program_blocks WHERE program_id = $program_id";
+    $result = $conn->query($sql);
+
+    $admission_blocks = [];
+    if ($result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            // Tách các khối thành mảng nếu có nhiều khối trong một chuỗi
+            $blocks = explode(", ", $row['admission_block']);
+            $admission_blocks = array_merge($admission_blocks, $blocks);
+        }
+        $admission_blocks = array_unique($admission_blocks); // Loại bỏ các giá trị trùng lặp
+    }
+    return $admission_blocks;
+}
+
+// Hàm upload ảnh học bạ
+function uploadTranscriptImage($file) {
+    // Kiểm tra nếu file không tồn tại hoặc có lỗi khi upload
+    if (!isset($file) || $file['error'] !== 0) {
+        return "Có lỗi xảy ra khi upload file.";
+    }
+
+    // Kiểm tra loại file (chỉ chấp nhận jpg và png)
+    $allowedTypes = ['image/jpeg', 'image/png'];
+    if (!in_array($file['type'], $allowedTypes)) {
+        return "Chỉ chấp nhận file ảnh có đuôi .jpg và .png.";
+    }
+
+    // Kiểm tra dung lượng file (< 100MB)
+    $maxFileSize = 100 * 1024 * 1024; // 100MB
+    if ($file['size'] > $maxFileSize) {
+        return "Dung lượng file vượt quá 100MB.";
+    }
+
+    // Tạo tên file mới để tránh trùng lặp
+    $uniqueFileName = uniqid("transcript_", true) . "." . pathinfo($file["name"], PATHINFO_EXTENSION);
+    $uploadDir = "uploads/"; // Thư mục lưu file
+    $filePath = $uploadDir . $uniqueFileName;
+
+    // Kiểm tra và tạo thư mục nếu chưa tồn tại
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0755, true);
+    }
+
+    // Di chuyển file vào thư mục đích
+    if (move_uploaded_file($file['tmp_name'], $filePath)) {
+        return "Upload ảnh học bạ thành công.";
+    } else {
+        return "Có lỗi xảy ra khi lưu file.";
+    }
+}
+
+// Hàm kiểm tra hồ sơ trùng lặp
+function isApplicationExists($student_id, $program_id, $admission_block) {
+    global $conn;
+    $sql = "SELECT COUNT(*) FROM applications WHERE student_id = '$student_id' AND program_id = '$program_id' AND admission_block = '$admission_block'";
+    
+    // Thực thi câu lệnh SQL
+    $result = mysqli_query($conn, $sql);
+    
+    // Lấy kết quả số lượng bản ghi
+    $row = mysqli_fetch_row($result);
+    return $row[0]; // Trả về số lượng bản ghi
+}
+
+
+// Hàm lưu hồ sơ vào bảng `applications`
+function saveApplication($student_id, $program_id, $admission_block, $scores, $transcript_image_path) {
+    global $conn;
+
+    // If no duplicate, proceed with the insertion
+    $sql = "INSERT INTO applications 
+        (student_id, program_id, admission_block, toan, ly, hoa, anh, van, su, dia, sinh, transcript_image_path, status) 
+        VALUES (
+            '$student_id', 
+            '$program_id', 
+            '$admission_block', 
+            '{$scores['toan']}', 
+            '{$scores['ly']}', 
+            '{$scores['hoa']}', 
+            '{$scores['anh']}', 
+            '{$scores['van']}', 
+            '{$scores['su']}', 
+            '{$scores['dia']}', 
+            '{$scores['sinh']}', 
+            '$transcript_image_path', 
+            'Chưa duyệt'
+        )";
+
     return mysqli_query($conn, $sql);
 }
+
+function getStudentApplications($account_type, $user_id) {
+    global $conn;  // Make sure to use your database connection
+    
+    $sql = "SELECT 
+            a.id AS application_id,
+            si.full_name AS student_name,  -- Cập nhật cột 'full_name' từ bảng sinh viên
+            p.program_name AS program_name,
+            a.toan, a.ly, a.hoa, a.anh, a.van, a.su, a.dia, a.sinh,
+            a.status, a.created_at, a.transcript_image_path, a.admission_block
+        FROM 
+            applications a
+        JOIN 
+            students_info si ON a.student_id = si.id  -- Sử dụng bảng đúng ở đây
+        JOIN 
+            programs p ON a.program_id = p.id
+        ORDER BY 
+            a.created_at DESC";
+
+
+    // Execute the query and return the result
+    $result = mysqli_query($conn, $sql);
+    return $result;
+}
+
+
+
 
 ?>
 

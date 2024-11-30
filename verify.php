@@ -141,7 +141,7 @@ if (isset($_GET['token'])) {
     <h2>Đăng Ký Thông Tin Thí Sinh</h2>
     <form id="form" action="" method="post">
         <h3>Thông Tin Cá Nhân</h3>
-        Tên đầy đủ: <input type="text" name="full_name" value="<?php echo isset($_POST['full_name']) ? $_POST['full_name'] : ''; ?>" required><br>
+        Tên đầy đủ: <input type="text" name="full_name" value="<?php $user['full_name']; ?>" readonly><br>
         Username: <input type="text" name="username" value="<?php echo $user['username']; ?>" readonly><br>
         Ngày sinh: <input type="date" name="birth_date" value="<?php echo isset($_POST['birth_date']) ? $_POST['birth_date'] : ''; ?>" required><br>
         Số căn cước: <input type="text" name="id_number" value="<?php echo $user['id_number']; ?>" readonly><br>

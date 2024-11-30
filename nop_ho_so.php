@@ -10,7 +10,14 @@ if (!isset($_SESSION['username'])) {
 // Kiểm tra quyền của người dùng
 $account_type = $_SESSION['account_type'];
 $user_id = $_SESSION['user_id'];
-$program_id = $_SESSION['program_id'];
+if (isset($_POST['apply'])) {
+    $_SESSION['program_id'] = $_POST['program_id'];
+    $program_id = $_SESSION['program_id'];
+}else{
+    $program_id = 0;
+    echo "<p>No program selected for application.</p>";
+}
+
 $admission_blocks = getAdmissionBlocks($program_id);
 ?>
 
@@ -67,7 +74,7 @@ $admission_blocks = getAdmissionBlocks($program_id);
     <nav class="sidebar close">
     <header>
         <div class="text logo-text">
-            <span class="name"><?php echo $_SESSION['username']; ?></span>
+            <span class="name"><?php echo $_SESSION['username'];?></span>
         </div>
         </div>
 
@@ -98,13 +105,14 @@ $admission_blocks = getAdmissionBlocks($program_id);
                 <span class="text nav-text">Xem hồ sơ chi tiết</span>
             </a>
             </li>
-
+            <?php if ($account_type == 'admin'): ?>
             <li class="nav-link">
             <a href="thong_ke_so_luong_ho_so.php">
                 <i class='bx bx-pie-chart-alt icon'></i>
                 <span class="text nav-text">Thống kê hồ sơ</span>
             </a>
             </li>
+            <?php endif; ?>
         </ul>
         </div>
 
@@ -155,53 +163,9 @@ $admission_blocks = getAdmissionBlocks($program_id);
 
 <?php
 //include 'functions.php';
-
-if (isset($_POST['create'])) 
-{
-    // Thêm ngành mới
-    $message = createProgram($_POST['program_name'], $_POST['admission_block'], $_POST['start_date'], $_POST['end_date'], $_POST['is_visible']);
-    echo "<p>$message</p>";
-} 
-elseif (isset($_POST['toggle_visibility'])) 
-{
-    // Thay đổi trạng thái hiển thị
-    $message = toggleProgramVisibility($_POST['program_id'], $_POST['is_visible']);
-    echo "<p>$message</p>";
-} 
-elseif (isset($_POST['update'])) 
-{
-    // Cập nhật ngành
-    $message = updateProgram($_POST['program_id'], $_POST['program_name'], $_POST['admission_block'], $_POST['start_date'], $_POST['end_date']);
-    echo "<p>$message</p>";
-} 
-elseif (isset($_POST['delete'])) 
-{
-    // Xoá ngành
-    $message = deleteProgram($_POST['program_id']);
-    echo "<p>$message</p>";
-}
-elseif(isset($_POST['assign_teacher']))
-{
-    // Phân quyền giáo viên
-    $teacher_id = $_POST['teacher_id'];
-    $program_id = $_POST['program_id'];
-    $check_sql = "SELECT * FROM program_teachers WHERE teacher_id = $teacher_id AND program_id = $program_id";
-    $check_result = mysqli_query($conn, $check_sql);
-
-    if (mysqli_num_rows($check_result) > 0) {
-        // Record already exists
-        echo "Giáo viên đã được phân quyền cho ngành này!";
-    } else {
-        // If not assigned, proceed to assign
-        $sql = "INSERT INTO program_teachers (teacher_id, program_id) VALUES ($teacher_id, $program_id)";
-        if (mysqli_query($conn, $sql)) {
-            echo "Giáo viên đã được phân quyền cho ngành!";
-        } else {
-            echo "Lỗi phân quyền giáo viên!";
-        }
-    }
-}
+$message = "";
 if (isset($_POST['submit'])) {
+    $program_id = $_SESSION['program_id'];
     $admission_block = $_POST['admission_block'];
     $scores = [
         'toan'  => isset($_POST['math_score']) ? $_POST['math_score'] : null,
@@ -222,7 +186,6 @@ if (isset($_POST['submit'])) {
         $message = uploadTranscriptImage($_FILES['transcript_image']);
         if (strpos($message, "thành công") !== false) {
             $transcript_image_path = "uploads/" . $_FILES['transcript_image']['name']; // Đường dẫn ảnh học bạ
-
             // Lưu hồ sơ vào bảng `applications`
             saveApplication($user_id, $program_id, $admission_block, $scores, $transcript_image_path);
             echo "Nộp hồ sơ thành công!";
@@ -231,65 +194,95 @@ if (isset($_POST['submit'])) {
         }
     } 
 }
+elseif (isset($_POST['approve'])) {
+    $program_id = $_SESSION['program_id'];
+    updateApplicationStatus($_POST['application_id'], 'Đã Duyệt');
+    $message = "Hồ sơ ID {$_POST['application_id']} đã được duyệt thành công.";
+} 
+elseif (isset($_POST['reject'])) {
+    $program_id = $_SESSION['program_id'];
+    updateApplicationStatus($_POST['application_id'], 'Không Duyệt');
+    $message = "Hồ sơ ID {$_POST['application_id']} đã bị từ chối.";
+} 
+elseif (isset($_POST['delete'])) {
+    $program_id = $_SESSION['program_id'];
+    deleteApplication($_POST['application_id']);
+    $message = "Hồ sơ ID {$_POST['application_id']} đã bị xóa.";
+}
+if ($message) {
+    echo "<p style='color: green; font-weight: bold;'>$message</p>";
+}
+
 ?>
 
 <h2>Hồ Sơ Học Sinh Đã Nộp</h2>
-<table border="1">
-    <tr>
-        <th>STT</th>
-        <th>Họ tên học sinh</th>
-        <th>Tên ngành nộp hồ sơ</th>
-        <th>Tên khối xét hồ sơ</th>
-        <th>Tên người duyệt hồ sơ</th>
-        <th>Trạng thái hồ sơ</th>
-        <?php if ($account_type == 'admin'): ?>
-            <th>Hành Động</th>
-        <?php elseif ($account_type == 'hs'): ?>
-            <th>Hành Động</th>
-        <?php elseif ($account_type == 'gv'): ?>
-            <th>Hành Động</th>
-        <?php endif; ?>
-    </tr>
-    <?php
-       // $result = getStudentApplications($account_type, $user_id);
 
-        while ($row = mysqli_fetch_assoc($result)):
-    ?>
+<?php if ($program_id != 0): ?>
+    <table border="1">
         <tr>
-            <td><?php echo $row['application_id']; ?></td>
-            <td><?php echo htmlspecialchars($row['student_name']); ?></td>
-            <td><?php echo htmlspecialchars($row['program_name']); ?></td>
-            <td><?php echo htmlspecialchars($row['admission_block']); ?></td>
-            <td><?php echo htmlspecialchars($row['reviewer_name']); ?></td>
-            <td><?php echo htmlspecialchars($row['status']); ?></td>
-            <?php if ($account_type == 'admin'): ?>
-                <td>
-                    <form action="manage_applications.php" method="POST" style="display:inline;">
-                        <input type="hidden" name="application_id" value="<?php echo $row['application_id']; ?>">
-                        <input type="submit" name="approve" value="Duyệt">
-                        <input type="submit" name="reject" value="Không Duyệt">
-                    </form>
-                    <button type="button" onclick="viewApplicationDetails(<?php echo $row['application_id']; ?>)">Xem chi tiết</button>
-                </td>
-            <?php elseif ($account_type == 'hs'): ?>
-                <td>
-                    <form action="view_application.php" method="POST">
-                        <input type="hidden" name="application_id" value="<?php echo $row['application_id']; ?>">
-                        <input type="submit" name="view_application" value="Xem Hồ Sơ">
-                    </form>
-                </td>
-            <?php elseif ($account_type == 'gv'): ?>
-                <td>
-                    <form action="view_application.php" method="POST">
-                        <input type="hidden" name="application_id" value="<?php echo $row['application_id']; ?>">
-                        <input type="submit" name="view_application" value="Xem Hồ Sơ">
-                    </form>
-                </td>
+            <th>STT</th>
+            <th>Họ tên học sinh</th>
+            <th>Tên ngành nộp hồ sơ</th>
+            <th>Tên khối xét hồ sơ</th>
+            <?php if ($account_type == 'admin' || $account_type == 'hs'): ?>
+                <th>Tên người duyệt hồ sơ</th>
             <?php endif; ?>
+            <th>Trạng thái hồ sơ</th>
+            <th>Hành Động</th>
         </tr>
-    <?php endwhile; ?>
-</table>
+        
+        <?php
+            $result = getStudentApplications($account_type, $user_id, $program_id);
+            $stt = 1;
+            while ($row = mysqli_fetch_assoc($result)):
+        ?>
+            <tr>
+                <td><?php echo $stt++; ?></td>
+                <td><?php echo $row['student_name']; ?></td>
+                <td><?php echo $row['program_name']; ?></td>
+                <td><?php echo $row['admission_block']; ?></td>
+                <?php if ($account_type == 'admin' || $account_type == 'hs'): ?>
+                    <td>
+                        <select>
+                            <?php 
+                            $reviewers = explode(', ', $row['reviewer_names']); // Tách tên giáo viên ra thành mảng
+                            foreach ($reviewers as $reviewer): 
+                            ?>
+                                <option><?php echo $reviewer; ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </td>
+                <?php endif; ?>
 
+                <td><?php echo $row['status']; ?></td>
+                <?php if ($account_type == 'admin' || $account_type == 'gv'): ?>
+                    <td>
+                        <!-- Nút hành động cho cả admin và gv -->
+                        <form action="" method="POST" style="display:inline;">
+                            <input type="hidden" name="application_id" value="<?php echo $row['application_id']; ?>">
+                            <input type="submit" name="approve" value="Duyệt">
+                            <input type="submit" name="reject" value="Không Duyệt">
+                            <?php if ($account_type == 'admin'): ?>
+                                <input type="submit" name="delete" value="Xóa hồ sơ">
+                            <?php endif; ?>
+                        </form>
+                
+                    </td>
+                <?php endif; ?>
+                <?php if ($account_type == 'admin' || $account_type == 'gv' || $account_type == 'hs'): ?>
+                    <td>
+                        <form action="xem_ho_so.php" method="POST">
+                            <input type="hidden" name="application_id" value="<?php echo $row['application_id']; ?>">
+                            <input type="submit" name="view_application" value="Xem Hồ Sơ">
+                        </form> 
+                    </td>
+                <?php endif; ?>
+            </tr>
+        <?php endwhile; ?>
+    </table>
+<?php else: ?>
+    <p>Chưa chọn hồ sơ để nộp</p>
+<?php endif; ?>
 
 <?php if ($account_type == 'admin'): ?>
     <div id="editProgramForm" style="display:none;">

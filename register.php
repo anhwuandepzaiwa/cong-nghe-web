@@ -8,6 +8,7 @@
 <body>
     <h2>Đăng Ký Tài Khoản</h2>
     <form action="" method="post">
+        Họ và tên: <input type="text" name="full_name" value="<?php echo isset($_POST['full_name']) ? $_POST['full_name'] : ''; ?>" required><br>
         Email: <input type="email" name="email" value="<?php echo isset($_POST['email']) ? $_POST['email'] : ''; ?>" required><br>
         Số căn cước: <input type="text" name="id_number" value="<?php echo isset($_POST['id_number']) ? $_POST['id_number'] : ''; ?>" required><br>
         Tài khoản: <input type="text" name="username" value="<?php echo isset($_POST['username']) ? $_POST['username'] : ''; ?>" required><br>
@@ -27,6 +28,7 @@
         include 'functions.php';
         if (isset($_POST['submit'])) 
         {
+            $full_name = trim($_POST['full_name']);
             $email = trim($_POST['email']);
             $id_number = trim($_POST['id_number']);
             $username = trim($_POST['username']);
@@ -78,7 +80,7 @@
             }
             else 
             {
-                if (register_user($conn, $email, $id_number, $username, $password, $account_type)) 
+                if (register_user($conn, $full_name, $email, $id_number, $username, $password, $account_type)) 
                 {
                     echo "Đăng ký thành công";
                     if (check_email_exists($conn, $email) && check_id_number_exists($conn, $id_number)) 

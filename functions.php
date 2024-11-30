@@ -38,8 +38,8 @@ function check_username_exists($conn, $username) {
 }
 
 // Hàm đăng ký tài khoản mới
-function register_user($conn, $email, $id_number, $username, $password, $account_type){
-    $sql = "INSERT INTO users (email, id_number, username, password, account_type) VALUES ('$email', '$id_number', '$username', '$password', '$account_type')";
+function register_user($conn, $full_name, $email, $id_number, $username, $password, $account_type){
+    $sql = "INSERT INTO users (full_name, email, id_number, username, password, account_type) VALUES ('$full_name','$email', '$id_number', '$username', '$password', '$account_type')";
     if(mysqli_query($conn, $sql)) 
     {
         return true;
@@ -364,6 +364,30 @@ function uploadTranscriptImage($file) {
     }
 }
 
+function getTranscriptImagePath($student_id, $program_id, $admission_block) {
+    global $conn;
+    $sql = "SELECT transcript_image FROM applications WHERE student_id = '$student_id' AND program_id = '$program_id' AND admission_block = '$admission_block'";
+    $result = mysqli_query($conn, $sql);
+    
+    if ($row = $result->fetch_assoc()) {
+        return $row['transcript_image'];
+    }
+    return null;
+}
+
+// Function to delete an uploaded file
+function deleteUploadedFile($filePath) {
+    if (file_exists($filePath)) {
+        if (unlink($filePath)) {
+            return "File đã được xóa thành công.";
+        } else {
+            return "Có lỗi xảy ra khi xóa file.";
+        }
+    } else {
+        return "File không tồn tại.";
+    }
+}
+
 // Hàm kiểm tra hồ sơ trùng lặp
 function isApplicationExists($student_id, $program_id, $admission_block) {
     global $conn;
@@ -404,30 +428,121 @@ function saveApplication($student_id, $program_id, $admission_block, $scores, $t
     return mysqli_query($conn, $sql);
 }
 
-function getStudentApplications($account_type, $user_id) {
-    global $conn;  // Make sure to use your database connection
-    
+function getStudentApplications($account_type, $user_id, $program_id) {
+    global $conn;
+
+    // Tạo cơ sở truy vấn chung
     $sql = "SELECT 
-            a.id AS application_id,
-            si.full_name AS student_name,  -- Cập nhật cột 'full_name' từ bảng sinh viên
-            p.program_name AS program_name,
-            a.toan, a.ly, a.hoa, a.anh, a.van, a.su, a.dia, a.sinh,
-            a.status, a.created_at, a.transcript_image_path, a.admission_block
-        FROM 
-            applications a
-        JOIN 
-            students_info si ON a.student_id = si.id  -- Sử dụng bảng đúng ở đây
-        JOIN 
-            programs p ON a.program_id = p.id
-        ORDER BY 
-            a.created_at DESC";
+                a.id AS application_id,
+                si.full_name AS student_name,
+                p.program_name AS program_name,
+                a.admission_block,
+                a.status,
+                GROUP_CONCAT(u.full_name SEPARATOR ', ') AS reviewer_names
+            FROM 
+                applications a
+            JOIN 
+                student_info si ON a.student_id = si.user_id
+            JOIN 
+                programs p ON a.program_id = p.id
+            LEFT JOIN 
+                program_teachers pt ON pt.program_id = p.id
+            LEFT JOIN 
+                users u ON u.id = pt.teacher_id";
 
+    // Thêm điều kiện cho từng loại tài khoản
+    if ($account_type == 'hs') {
+        // Học sinh chỉ thấy hồ sơ của chính mình và thuộc ngành đã nộp
+        $sql .= " WHERE si.user_id = " . intval($user_id) . " AND a.program_id = " . intval($program_id);
+    } elseif ($account_type == 'gv') {
+        // Giáo viên chỉ thấy hồ sơ của ngành mà mình được phân công
+        $sql .= " WHERE pt.teacher_id = " . intval($user_id);
+        if ($program_id) {
+            // Nếu có program_id, lọc thêm ngành cụ thể
+            $sql .= " AND a.program_id = " . intval($program_id);
+        }
+    } elseif ($account_type == 'admin') {
+        // Admin có thể xem toàn bộ hồ sơ, hoặc lọc theo ngành nếu có program_id
+        if ($program_id) {
+            $sql .= " WHERE a.program_id = " . intval($program_id);
+        }
+    }
 
-    // Execute the query and return the result
+    // Thêm GROUP BY và ORDER BY
+    $sql .= " GROUP BY a.id ORDER BY a.created_at DESC";
+
     $result = mysqli_query($conn, $sql);
+    if (!$result) {
+        die("Query failed: " . mysqli_error($conn));
+    }
     return $result;
 }
 
+function updateApplicationStatus($application_id, $status) {
+    global $conn; // Make sure your database connection is accessible here
+    $sql = "UPDATE applications SET status = '$status' WHERE id = $application_id";
+    return mysqli_query($conn, $sql);
+}
+
+function deleteApplication($application_id) {
+    global $conn;
+    $sql = "DELETE FROM applications WHERE id = $application_id";
+    return mysqli_query($conn, $sql);
+}
+
+function getApplicationDetails($application_id) {
+    global $conn;
+
+    $sql = "SELECT 
+                si.full_name AS student_name,
+                si.birth_date,
+                si.id_number,
+                si.issue_date,
+                si.place_of_issue,
+                si.gender,
+                si.place_of_birth,
+                si.phone_number,
+                si.emergency_contact,
+                si.email,
+                si.permanent_province,
+                si.permanent_district,
+                si.permanent_ward,
+                si.permanent_address,
+                si.temporary_province,
+                si.temporary_district,
+                si.temporary_ward,
+                si.temporary_address,
+                p.program_name,
+                a.admission_block,
+                a.status,
+                a.toan, a.ly, a.hoa, a.anh, a.van, a.su, a.dia, a.sinh
+            FROM 
+                applications a
+            JOIN 
+                student_info si ON a.student_id = si.user_id
+            JOIN 
+                programs p ON a.program_id = p.id
+            WHERE 
+                a.id = $application_id";
+                
+    return mysqli_query($conn, $sql);
+}
+
+function getProgramApplicationStatistics() {
+    global $conn;
+    
+    $query = "
+        SELECT programs.program_name, 
+               COUNT(CASE WHEN applications.status = 'Đã duyệt' THEN 1 END) AS approved_count,
+               COUNT(CASE WHEN applications.status = 'Chưa duyệt' THEN 1 END) AS pending_count,
+               COUNT(CASE WHEN applications.status = 'Không duyệt' THEN 1 END) AS rejected_count
+        FROM programs
+        LEFT JOIN applications ON programs.id = applications.program_id
+        GROUP BY programs.program_name
+    ";
+    
+    return mysqli_query($conn, $query);
+}
 
 
 

@@ -98,12 +98,14 @@ $user_id = $_SESSION['user_id'];
             </a>
             </li>
 
+            <?php if ($account_type == 'admin'): ?>
             <li class="nav-link">
             <a href="thong_ke_so_luong_ho_so.php">
                 <i class='bx bx-pie-chart-alt icon'></i>
                 <span class="text nav-text">Thống kê hồ sơ</span>
             </a>
             </li>
+            <?php endif; ?>
         </ul>
         </div>
 
@@ -199,6 +201,7 @@ elseif(isset($_POST['assign_teacher']))
         }
     }
 }
+
 ?>
 
 <h2>Các Ngành Đã Tạo</h2>
@@ -212,7 +215,7 @@ elseif(isset($_POST['assign_teacher']))
             <th>Trạng Thái</th>
             <th>Hành Động</th>
             <th>Giáo Viên Phụ Trách</th>
-        <?php elseif ($account_type == 'hs'): ?>
+        <?php elseif ($account_type == 'hs' || $account_type == 'gv'): ?>
             <th>Hành Động</th>
         <?php endif; ?>
     </tr>
@@ -253,9 +256,9 @@ elseif(isset($_POST['assign_teacher']))
                     </form>
                 </td>
                 <td>
-                    <form action="view_application.php" method="POST" style="display:inline;">
+                    <form action="nop_ho_so.php" method="POST" style="display:inline;">
                         <input type="hidden" name="program_id" value="<?php echo $row['id']; ?>">
-                        <input type="submit" name="view_application" value="Xem Hồ Sơ">
+                        <input type="submit" name="apply" value="Nộp hồ sơ">
                     </form>
                 </td>
             <?php elseif ($account_type == 'hs'): ?>
@@ -266,7 +269,7 @@ elseif(isset($_POST['assign_teacher']))
                 <td>
                     <?php if ($isApplicationOpen): ?>
                         <form action="nop_ho_so.php" method="POST" style="display:inline;">
-                            <input type="hidden" name="program_id" value="<?php $_SESSION['program_id'] = $row['id'];echo $row['id']; ?>">
+                            <input type="hidden" name="program_id" value="<?php echo $row['id']; ?>">
                             <input type="submit" name="apply" value="Nộp Hồ Sơ">
                         </form>
                     <?php else: ?>
@@ -275,17 +278,9 @@ elseif(isset($_POST['assign_teacher']))
                 </td>
             <?php elseif ($account_type == 'gv'): ?>
                 <td>
-                    <form action="view_application.php" method="POST" style="display:inline;">
+                    <form action="nop_ho_so.php" method="POST" style="display:inline;">
                         <input type="hidden" name="program_id" value="<?php echo $row['id']; ?>">
-                        <input type="submit" name="view_application" value="Xem Hồ Sơ">
-                    </form>
-                </td>
-            <?php elseif ($account_type == 'gv'): ?>
-                <td>
-                    <form action="" method="POST" style="display:inline;">
-                        <input type="hidden" name="application_id" value="<?php echo $row['id']; ?>">
-                        <input type="submit" name="approve" value="Duyệt">
-                        <input type="submit" name="reject" value="Không Duyệt">
+                        <input type="submit" name="apply" value="Nộp hồ sơ">
                     </form>
                 </td>
             <?php endif; ?>

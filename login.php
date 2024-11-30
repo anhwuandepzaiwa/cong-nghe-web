@@ -38,7 +38,7 @@
             if(handle_login_attempts())
             {
                 // Lấy account_type từ cơ sở dữ liệu cùng với xác thực tài khoản
-                $sql = "SELECT id, account_type, is_verified FROM users WHERE username = '$username' AND password = '$password'";
+                $sql = "SELECT id, full_name ,account_type, is_verified FROM users WHERE username = '$username' AND password = '$password'";
                 $result = mysqli_query($conn, $sql);
                 if(mysqli_num_rows($result) === 1){
                     $user = mysqli_fetch_assoc($result);
@@ -46,6 +46,8 @@
                     if ($user['is_verified'] == 1) 
                     {
                         // Đăng nhập thành công, lưu thông tin vào session
+                        $_SESSION['full_name'] = $user['full_name'];
+                        $_SESSION['username'] = $username;
                         $_SESSION['username'] = $username;
                         $_SESSION['account_type'] = $user['account_type'];
                         $_SESSION['user_id'] = $user['id'];

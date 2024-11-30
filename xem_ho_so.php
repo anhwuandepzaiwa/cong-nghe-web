@@ -1,6 +1,6 @@
 <?php
 session_start();
-
+include 'functions.php';
 // Kiểm tra người dùng đã đăng nhập hay chưa
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
@@ -10,7 +10,13 @@ if (!isset($_SESSION['username'])) {
 // Kiểm tra quyền của người dùng
 $account_type = $_SESSION['account_type'];
 $user_id = $_SESSION['user_id'];
-
+if (isset($_POST['view_application'])) {
+    $_SESSION['application_id'] = $_POST['application_id'];
+    $application_id = $_SESSION['application_id'];
+}else{
+    $application_id = 0;
+    echo "<p>No application.</p>";
+}
 ?>
 
 <!DOCTYPE html>
@@ -59,6 +65,10 @@ $user_id = $_SESSION['user_id'];
             padding: 15px;
             background-color: #f9f9f9;
         }
+       
+        .form-group label {
+            font-weight: 600; /* Medium boldness for labels */
+        }
     </style>
 </head>
 
@@ -66,7 +76,7 @@ $user_id = $_SESSION['user_id'];
     <nav class="sidebar close">
     <header>
         <div class="text logo-text">
-            <span class="name"><?php echo $_SESSION['username']; ?></span>
+            <span class="name"><?php echo $_SESSION['username'];?></span>
         </div>
         </div>
 
@@ -98,12 +108,14 @@ $user_id = $_SESSION['user_id'];
             </a>
             </li>
 
+            <?php if ($account_type == 'admin'): ?>
             <li class="nav-link">
             <a href="thong_ke_so_luong_ho_so.php">
                 <i class='bx bx-pie-chart-alt icon'></i>
                 <span class="text nav-text">Thống kê hồ sơ</span>
             </a>
             </li>
+            <?php endif; ?>
         </ul>
         </div>
 
@@ -132,198 +144,162 @@ $user_id = $_SESSION['user_id'];
 
 <section class="home" style="margin-left: 10px;">
     <div class="text">Chào mừng <?php echo $_SESSION['username']; ?></div>
-    <?php if ($account_type == 'admin'): ?>
-        <button id="createProgramBtn">Tạo Ngành Xét Tuyển</button>
-            <div id="createProgramForm" style="display: none;">
-                <form action="" method="POST">
-                    <h2>Tạo Ngành Xét Tuyển</h2>
-                    Tên ngành:<input type="text" id="program_name" name="program_name" required placeholder="Nhập tên ngành"><br>
-                    Khối xét tuyển:<input type="text" id="admission_block" name="admission_block" required placeholder="VD: A00, A01, C00"><br>
-                    Thời gian bắt đầu:<input type="date" id="start_date" name="start_date" required><br>
-                    Thời gian kết thúc:<input type="date" id="end_date" name="end_date" required><br>
-                    Trạng thái hiển thị:<select id="is_visible" name="is_visible" required>
-                        <option value="1">Hiển Thị</option>
-                        <option value="0">Ẩn</option>
-                    </select><br>
-                    <input type="submit" name="create" value="Tạo ngành">
-                    <button type="button" id="cancelBtn">Hủy</button>
-                </form>
+
+    <h2>Chi Tiết Hồ Sơ</h2>
+    <?php if ($application_id != 0): ?>
+        <form method="POST" action="">
+            <?php
+                $result = getApplicationDetails($_SESSION['application_id']);
+                while ($row = mysqli_fetch_assoc($result)):
+                    $subjects = [];
+
+                    // Xác định môn học theo khối xét tuyển
+                    switch ($row['admission_block']) {
+                        case 'A01':
+                            $subjects = [
+                                'Toán' => $row['toan'],
+                                'Lý' => $row['ly'],
+                                'Anh' => $row['anh']
+                            ];
+                            break;
+                        case 'A00':
+                            $subjects = [
+                                'Toán' => $row['toan'],
+                                'Lý' => $row['ly'],
+                                'Hóa' => $row['hoa']
+                            ];
+                            break;
+                        case 'C00':
+                            $subjects = [
+                                'Văn' => $row['van'],
+                                'Sử' => $row['su'],
+                                'Địa' => $row['dia']
+                            ];
+                            break;
+                        case 'D01':
+                            $subjects = [
+                                'Toán' => $row['toan'],
+                                'Văn' => $row['van'],
+                                'Anh' => $row['anh']
+                            ];
+                            break;
+                        case 'B00':
+                            $subjects = [
+                                'Toán' => $row['toan'],
+                                'Hóa' => $row['hoa'],
+                                'Sinh' => $row['sinh']
+                            ];
+                            break;
+                    }
+            ?>
+
+            <div class="form-group">
+                <label>Họ tên học sinh:</label>
+                <span><?php echo isset($row['student_name']) ? $row['student_name'] : 'N/A'; ?></span>
             </div>
-    <?php endif; ?>
 
-<?php
-include 'functions.php';
+            <div class="form-group">
+                <label>Ngày sinh:</label>
+                <span><?php echo isset($row['birth_date']) ? $row['birth_date'] : 'N/A'; ?></span>
+            </div>
 
-if (isset($_POST['create'])) 
-{
-    // Thêm ngành mới
-    $message = createProgram($_POST['program_name'], $_POST['admission_block'], $_POST['start_date'], $_POST['end_date'], $_POST['is_visible']);
-    echo "<p>$message</p>";
-} 
-elseif (isset($_POST['toggle_visibility'])) 
-{
-    // Thay đổi trạng thái hiển thị
-    $message = toggleProgramVisibility($_POST['program_id'], $_POST['is_visible']);
-    echo "<p>$message</p>";
-} 
-elseif (isset($_POST['update'])) 
-{
-    // Cập nhật ngành
-    $message = updateProgram($_POST['program_id'], $_POST['program_name'], $_POST['admission_block'], $_POST['start_date'], $_POST['end_date']);
-    echo "<p>$message</p>";
-} 
-elseif (isset($_POST['delete'])) 
-{
-    // Xoá ngành
-    $message = deleteProgram($_POST['program_id']);
-    echo "<p>$message</p>";
-}
-elseif(isset($_POST['assign_teacher']))
-{
-    // Phân quyền giáo viên
-    $teacher_id = $_POST['teacher_id'];
-    $program_id = $_POST['program_id'];
-    $check_sql = "SELECT * FROM program_teachers WHERE teacher_id = $teacher_id AND program_id = $program_id";
-    $check_result = mysqli_query($conn, $check_sql);
+            <div class="form-group">
+                <label>Số CMND/CCCD:</label>
+                <span><?php echo isset($row['id_number']) ? $row['id_number'] : 'N/A'; ?></span>
+            </div>
 
-    if (mysqli_num_rows($check_result) > 0) {
-        // Record already exists
-        echo "Giáo viên đã được phân quyền cho ngành này!";
-    } else {
-        // If not assigned, proceed to assign
-        $sql = "INSERT INTO program_teachers (teacher_id, program_id) VALUES ($teacher_id, $program_id)";
-        if (mysqli_query($conn, $sql)) {
-            echo "Giáo viên đã được phân quyền cho ngành!";
-        } else {
-            echo "Lỗi phân quyền giáo viên!";
-        }
-    }
-}
-?>
+            <div class="form-group">
+                <label>Ngày cấp:</label>
+                <span><?php echo isset($row['issue_date']) ? $row['issue_date'] : 'N/A'; ?></span>
+            </div>
 
-<h2>Các Ngành Đã Tạo</h2>
-<table border="1">
-    <tr>
-        <th>Tên Ngành</th>
-        <th>Khối Xét Tuyển</th>
-        <th>Thời Gian Bắt Đầu</th>
-        <th>Thời Gian Kết Thúc</th>
-        <?php if ($account_type == 'admin'): ?>
-            <th>Trạng Thái</th>
-            <th>Hành Động</th>
-            <th>Giáo Viên Phụ Trách</th>
-        <?php elseif ($account_type == 'hs'): ?>
-            <th>Hành Động</th>
-        <?php endif; ?>
-    </tr>
-    <?php
-        $result = getAllPrograms($account_type, $user_id);
+            <div class="form-group">
+                <label>Nơi cấp:</label>
+                <span><?php echo isset($row['place_of_issue']) ? $row['place_of_issue'] : 'N/A'; ?></span>
+            </div>
 
-        while ($row = mysqli_fetch_assoc($result)):
-    ?>
-        <tr>
-            <td><?php echo $row['program_name']; ?></td>
-            <td><?php echo $row['admission_block']; ?></td>
-            <td><?php echo $row['start_date']; ?></td>
-            <td><?php echo $row['end_date']; ?></td>
-            <?php if ($account_type == 'admin'): ?>
-                <td><?php echo $row['is_visible'] ? 'Hiển Thị' : 'Ẩn'; ?></td>
-            <?php endif; ?>
-            <?php if ($account_type == 'admin'): ?>
-                <td>
-                    <form action="" method="POST" style="display:inline;">
-                        <input type="hidden" name="program_id" value="<?php echo $row['id']; ?>">
-                        <input type="hidden" name="is_visible" value="<?php echo $row['is_visible']; ?>">
-                        <input type="submit" name="toggle_visibility" value="<?php echo $row['is_visible'] ? 'Ẩn' : 'Hiển Thị'; ?>">
-                    </form>
-                    <button type="button" onclick="showEditForm(<?php echo $row['id']; ?>, '<?php echo $row['program_name']; ?>', '<?php echo $row['admission_block']; ?>', '<?php echo $row['start_date']; ?>', '<?php echo $row['end_date']; ?>')">Sửa</button>
-                    <form action="" method="POST" style="display:inline;" onsubmit="return confirm('Bạn có chắc chắn muốn xóa ngành này?');">
-                        <input type="hidden" name="program_id" value="<?php echo $row['id']; ?>">
-                        <input type="submit" name="delete" value="Xóa">
-                    </form>
-                </td>
-                <td>
-                    <form action="" method="POST">
-                        Giáo Viên:
-                        <select name="teacher_id">
-                            <?php echo getTeacherOptions(); ?>
-                        </select>
-                        <input type="hidden" name="program_id" value="<?php echo $row['id']; ?>">
-                        <input type="submit" name="assign_teacher" value="Phân Quyền">
-                    </form>
-                </td>
-                <td>
-                    <form action="view_application.php" method="POST" style="display:inline;">
-                        <input type="hidden" name="program_id" value="<?php echo $row['id']; ?>">
-                        <input type="submit" name="view_application" value="Xem Hồ Sơ">
-                    </form>
-                </td>
-            <?php elseif ($account_type == 'hs'): ?>
-                <?php
-                    $currentDate = date("Y-m-d");
-                    $isApplicationOpen = ($currentDate >= $row['start_date'] && $currentDate <= $row['end_date']);
-                ?>
-                <td>
-                    <?php if ($isApplicationOpen): ?>
-                        <form action="apply.php" method="POST" style="display:inline;">
-                            <input type="hidden" name="program_id" value="<?php echo $row['id']; ?>">
-                            <input type="submit" name="apply" value="Nộp Hồ Sơ">
-                        </form>
-                    <?php else: ?>
-                        <span>Đã hết hạn nộp hồ sơ</span>
-                    <?php endif; ?>
-                </td>
-            <?php elseif ($account_type == 'gv'): ?>
-                <td>
-                    <form action="view_application.php" method="POST" style="display:inline;">
-                        <input type="hidden" name="program_id" value="<?php echo $row['id']; ?>">
-                        <input type="submit" name="view_application" value="Xem Hồ Sơ">
-                    </form>
-                </td>
-            <?php elseif ($account_type == 'gv'): ?>
-                <td>
-                    <form action="" method="POST" style="display:inline;">
-                        <input type="hidden" name="application_id" value="<?php echo $row['id']; ?>">
-                        <input type="submit" name="approve" value="Duyệt">
-                        <input type="submit" name="reject" value="Không Duyệt">
-                    </form>
-                </td>
-            <?php endif; ?>
-        </tr>
-    <?php endwhile; ?>
-</table>
+            <div class="form-group">
+                <label>Giới tính:</label>
+                <span><?php echo isset($row['gender']) ? $row['gender'] : 'N/A'; ?></span>
+            </div>
 
-<?php if ($account_type == 'admin'): ?>
-    <div id="editProgramForm" style="display:none;">
-        <form action="" method="POST">
-            <h2>Sửa Ngành Xét Tuyển</h2>
-            <input type="hidden" id="edit_program_id" name="program_id">
-            Tên ngành:<input type="text" id="edit_program_name" name="program_name" required><br>
-            Khối xét tuyển:<input type="text" id="edit_admission_block" name="admission_block" required><br>
-            Thời gian bắt đầu:<input type="date" id="edit_start_date" name="start_date" required><br>
-            Thời gian kết thúc:<input type="date" id="edit_end_date" name="end_date" required><br>
-            <input type="submit" name="update" value="Cập Nhật">
-            <button type="button" onclick="document.getElementById('editProgramForm').style.display='none'">Hủy</button>
+            <div class="form-group">
+                <label>Nơi sinh:</label>
+                <span><?php echo isset($row['place_of_birth']) ? $row['place_of_birth'] : 'N/A'; ?></span>
+            </div>
+
+            <div class="form-group">
+                <label>Số điện thoại:</label>
+                <span><?php echo isset($row['phone_number']) ? $row['phone_number'] : 'N/A'; ?></span>
+            </div>
+
+            <div class="form-group">
+                <label>Liên hệ khẩn cấp:</label>
+                <span><?php echo isset($row['emergency_contact']) ? $row['emergency_contact'] : 'N/A'; ?></span>
+            </div>
+
+            <div class="form-group">
+                <label>Email:</label>
+                <span><?php echo isset($row['email']) ? $row['email'] : 'N/A'; ?></span>
+            </div>
+
+            <!-- Dồn các thông tin địa chỉ thường trú vào một trường duy nhất -->
+            <div class="form-group">
+                <label>Địa chỉ thường trú:</label>
+                <span>
+                    <?php
+                        // Kết hợp các trường thành một địa chỉ đầy đủ
+                        $address = isset($row['permanent_address']) ? $row['permanent_address'] : '';
+                        $address .= isset($row['permanent_ward']) ? ' - ' . $row['permanent_ward'] : '';
+                        $address .= isset($row['permanent_district']) ? ' - ' . $row['permanent_district'] : '';
+                        $address .= isset($row['permanent_province']) ? ' - ' . $row['permanent_province'] : '';
+                        
+                        echo $address ?: 'N/A';
+                    ?>
+                </span>
+            </div>
+
+            <!-- Dồn các thông tin địa chỉ tạm trú vào một trường duy nhất -->
+            <div class="form-group">
+                <label>Địa chỉ tạm trú:</label>
+                <span>
+                    <?php
+                        // Kết hợp các trường thành một địa chỉ đầy đủ
+                        $temp_address = isset($row['temporary_address']) ?  $row['temporary_address'] : '';
+                        $temp_address .= isset($row['temporary_ward']) ? ' - ' . $row['temporary_ward'] : '';
+                        $temp_address .= isset($row['temporary_district']) ? ' - ' . $row['temporary_district'] : '';
+                        $temp_address .= isset($row['temporary_province']) ? ' - ' . $row['temporary_province'] : '';
+                        
+                        echo $temp_address ?: 'N/A';
+                    ?>
+                </span>
+            </div>
+
+            <div class="form-group">
+                <label>Tên ngành nộp hồ sơ:</label>
+                <span><?php echo isset($row['program_name']) ? $row['program_name'] : 'N/A'; ?></span>
+            </div>
+
+            <div class="form-group">
+                <label>Tên khối xét hồ sơ:</label>
+                <span><?php echo isset($row['admission_block']) ? $row['admission_block'] : 'N/A'; ?></span>
+            </div>
+
+            <h3>Điểm các môn</h3>
+            <?php 
+            // Hiển thị điểm của từng môn theo khối
+            foreach ($subjects as $subject => $score): 
+            ?>
+                <div class="form-group">
+                    <label><?php echo $subject; ?>:</label>
+                    <span><?php echo isset($score) ? $score : 'N/A'; ?></span>
+                </div>
+            <?php endforeach; ?>
+        <?php endwhile; ?>
         </form>
-    </div>
-<?php endif; ?>    
-
-<script>
-    document.getElementById("createProgramBtn").onclick = function() {
-        document.getElementById("createProgramForm").style.display = "block";
-    }
-    document.getElementById("cancelBtn").onclick = function() {
-        document.getElementById("createProgramForm").style.display = "none";
-    }
-    function showEditForm(id, name, block, start, end) {
-        document.getElementById('edit_program_id').value = id;
-        document.getElementById('edit_program_name').value = name;
-        document.getElementById('edit_admission_block').value = block;
-        document.getElementById('edit_start_date').value = start;
-        document.getElementById('edit_end_date').value = end;
-        document.getElementById('editProgramForm').style.display = 'block';
-    }
-</script>
+    <?php else: ?>
+        <p>Chưa chọn hồ sơ để xem chi tiết hồ sơ</p>
+    <?php endif; ?>
 
 </section>
     
@@ -331,7 +307,6 @@ elseif(isset($_POST['assign_teacher']))
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script  src="./script.js"></script>
-</body>
 
-
+</body>]
 </html>

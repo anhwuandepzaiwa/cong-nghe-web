@@ -195,19 +195,18 @@ if (isset($_GET['token'])) {
     </p>
     
     <?php
-        // Xử lý form khi người dùng nhấn nút Lưu
         if (isset($_POST['submit'])) {
             $full_name = $_POST['full_name'];
-            $username = $user['username']; // Không thay đổi
+            $username = $user['username']; 
             $birth_date = $_POST['birth_date'];
-            $id_number = $user['id_number']; // Không thay đổi
+            $id_number = $user['id_number']; 
             $issue_date = $_POST['issue_date'];
             $place_of_issue = $_POST['place_of_issue'];
             $gender = $_POST['gender'];
             $place_of_birth = $_POST['place_of_birth'];
             $phone_number = $_POST['phone_number'];
             $emergency_contact = $_POST['emergency_contact'];
-            $email = $user['email']; // Không thay đổi
+            $email = $user['email']; 
             $permanent_province = $_POST['permanent_province'];
             $permanent_district = $_POST['permanent_district'];
             $permanent_ward = $_POST['permanent_ward'];
@@ -217,12 +216,10 @@ if (isset($_GET['token'])) {
             $temporary_ward = $_POST['temporary_ward'];
             $temporary_address = $_POST['temporary_address'];
 
-            // Lưu thông tin vào CSDL
             $sql_insert = "INSERT INTO student_info (full_name, username, birth_date, id_number, issue_date, place_of_issue, gender, place_of_birth, phone_number, emergency_contact, email, permanent_province, permanent_district, permanent_ward, permanent_address, temporary_province, temporary_district, temporary_ward, temporary_address)
             VALUES ('$full_name', '$username', '$birth_date', '$id_number', '$issue_date', '$place_of_issue', '$gender', '$place_of_birth', '$phone_number', '$emergency_contact', '$email', '$permanent_province', '$permanent_district', '$permanent_ward', '$permanent_address', '$temporary_province', '$temporary_district', '$temporary_ward', '$temporary_address')";
 
             if (mysqli_query($conn, $sql_insert)) {
-                // Cập nhật trạng thái xác thực
                 $sql_update = "UPDATE users SET is_verified = 1, token = NULL, token_expiry = NULL WHERE token = '$token'";
                 mysqli_query($conn, $sql_update);
                 

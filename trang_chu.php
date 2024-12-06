@@ -139,11 +139,11 @@ $user_id = $_SESSION['user_id'];
             <div id="createProgramForm" style="display: none;">
                 <form action="" method="POST">
                     <h2>Tạo Ngành Xét Tuyển</h2>
-                    Tên ngành:<input type="text" id="program_name" name="program_name" required placeholder="Nhập tên ngành"><br>
-                    Khối xét tuyển:<input type="text" id="admission_block" name="admission_block" required placeholder="VD: A00, A01, C00"><br>
-                    Thời gian bắt đầu:<input type="date" id="start_date" name="start_date" required><br>
-                    Thời gian kết thúc:<input type="date" id="end_date" name="end_date" required><br>
-                    Trạng thái hiển thị:<select id="is_visible" name="is_visible" required>
+                    Tên ngành:<input type="text" id="program_name" name="program_name" required placeholder="Nhập tên ngành" value="<?php echo isset($_POST['program_name']) ? $_POST['program_name'] : ''; ?>"><br>
+                    Khối xét tuyển:<input type="text" id="admission_block" name="admission_block" required placeholder="VD: A00, A01, C00" value="<?php echo isset($_POST['admission_block']) ? $_POST['admission_block'] : ''; ?>"><br>
+                    Thời gian bắt đầu:<input type="date" id="start_date" name="start_date" value="<?php echo isset($_POST['start_date']) ? $_POST['start_date'] : ''; ?>" required><br>
+                    Thời gian kết thúc:<input type="date" id="end_date" name="end_date" value="<?php echo isset($_POST['end_date']) ? $_POST['end_date'] : ''; ?>" required><br>
+                    Trạng thái hiển thị:<select id="is_visible" name="is_visible" value="<?php echo isset($_POST['is_visible']) ? $_POST['is_visible'] : ''; ?>" required>
                         <option value="1">Hiển Thị</option>
                         <option value="0">Ẩn</option>
                     </select><br>
@@ -293,10 +293,10 @@ elseif(isset($_POST['assign_teacher']))
         <form action="" method="POST">
             <h2>Sửa Ngành Xét Tuyển</h2>
             <input type="hidden" id="edit_program_id" name="program_id">
-            Tên ngành:<input type="text" id="edit_program_name" name="program_name" required><br>
-            Khối xét tuyển:<input type="text" id="edit_admission_block" name="admission_block" required><br>
-            Thời gian bắt đầu:<input type="date" id="edit_start_date" name="start_date" required><br>
-            Thời gian kết thúc:<input type="date" id="edit_end_date" name="end_date" required><br>
+            Tên ngành:<input type="text" id="edit_program_name" name="program_name" value="<?php echo isset($_POST['program_name']) ? $_POST['program_name'] : ''; ?>"required><br>
+            Khối xét tuyển:<input type="text" id="edit_admission_block" name="admission_block" value="<?php echo isset($_POST['admission_block']) ? $_POST['admission_block'] : ''; ?>" required><br>
+            Thời gian bắt đầu:<input type="date" id="edit_start_date" name="start_date" value="<?php echo isset($_POST['start_date']) ? $_POST['start_date'] : ''; ?>" required><br>
+            Thời gian kết thúc:<input type="date" id="edit_end_date" name="end_date" value="<?php echo isset($_POST['end_date']) ? $_POST['end_date'] : ''; ?>" required><br>
             <input type="submit" name="update" value="Cập Nhật">
             <button type="button" onclick="document.getElementById('editProgramForm').style.display='none'">Hủy</button>
         </form>

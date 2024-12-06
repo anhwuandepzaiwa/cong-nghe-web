@@ -32,8 +32,8 @@
             $email = trim($_POST['email']);
             $id_number = trim($_POST['id_number']);
             $username = trim($_POST['username']);
-            $password = $_POST['password'];
-            $confirm_password = $_POST['confirm_password'];
+            $password = md5($_POST['password']);
+            $confirm_password = md5($_POST['confirm_password']);
             $account_type = $_POST['account_type'];
             
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) 

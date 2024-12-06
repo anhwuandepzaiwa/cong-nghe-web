@@ -162,7 +162,6 @@ $admission_blocks = getAdmissionBlocks($program_id);
 
 
 <?php
-//include 'functions.php';
 $message = "";
 if (isset($_POST['submit'])) {
     $program_id = $_SESSION['program_id'];

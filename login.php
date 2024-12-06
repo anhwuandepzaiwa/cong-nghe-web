@@ -33,7 +33,7 @@
         if (isset($_POST['submit'])) 
         {
             $username = $_POST['username'];
-            $password = $_POST['password'];
+            $password = md5($_POST['password']);
 
             if(handle_login_attempts())
             {

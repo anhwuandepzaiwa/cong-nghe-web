@@ -8,8 +8,8 @@
 <body>
     <h2>Xác thực tài khoản</h2>
     <form action="" method="post">
-        Email: <input type="email" name="email" required><br>
-        Số căn cước: <input type="text" name="id_number" required><br>
+        Email: <input type="email" name="email" value="<?php echo isset($_POST['email']) ? $_POST['email'] : ''; ?>" required><br>
+        Số căn cước: <input type="text" name="id_number" value="<?php echo isset($_POST['id_number']) ? $_POST['id_number'] : ''; ?>" required><br>
         <input type="submit" name="submit" value="Gửi yêu cầu">
     </form>
     <p><a href="login.php">Quay lại trang đăng nhập</a></p>

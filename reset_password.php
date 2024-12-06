@@ -46,11 +46,11 @@
     <form action="" method="post">
         <div class="form-group">
             <label for="new_password">Mật khẩu mới:</label>
-            <input type="password" id="new_password" name="new_password" required>
+            <input type="password" id="new_password" name="new_password" value="<?php echo isset($_POST['new_password']) ? $_POST['new_password'] : ''; ?>" required>
         </div>
         <div class="form-group">
             <label for="confirm_password">Xác nhận mật khẩu mới:</label>
-            <input type="password" id="confirm_password" name="confirm_password" required>
+            <input type="password" id="confirm_password" name="confirm_password" value="<?php echo isset($_POST['confirm_password']) ? $_POST['confirm_password'] : ''; ?>" required>
         </div>
         <input type="submit" name="submit" value="Đặt lại mật khẩu">
     </form>
@@ -62,11 +62,18 @@
             
             $new_password = trim($_POST['new_password']);
             $confirm_password = trim($_POST['confirm_password']);
+            if (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/', $new_password)) 
+            {
+                echo "Mật khẩu phải có ít nhất 8 ký tự, bao gồm 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt.";
+                return;
+            }
+
             $token = $_GET['token']; 
 
             if ($new_password !== $confirm_password) {
                 echo "Mật khẩu và xác nhận mật khẩu không khớp.";
             } else {
+                $new_password = md5($new_password);
                 $sql = "UPDATE users SET password = '$new_password', token = NULL WHERE token = '$token'";
                 if (mysqli_query($conn, $sql)) {
                     echo "Mật khẩu đã được cập nhật thành công. Bạn có thể đăng nhập.";
